@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, OrderedBulkOperation } = require('mongodb');
 require('dotenv').config();
 
 const app = express();
@@ -19,6 +19,7 @@ async function run(){
 
     try{
         const serviceCollection = client.db('plumberBoy').collection('services');
+        const reviewCollection = client.db('plumberBoy').collection('reviews');
 
         app.get('/homePage', async(req, res)=>{
             const query = {}
@@ -39,6 +40,35 @@ async function run(){
             const query = {_id: ObjectId(id)};
             const service = await serviceCollection.findOne(query);
             res.send(service);
+        });
+
+        // Reviews API
+
+        app.get('/reviews', async(req, res)=>{
+            let query = {};
+
+            if(req.query.email){
+                query = {
+                    email: req.query.email
+                }
+            }
+
+            const cursor = reviewCollection.find(query);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
+        });
+
+        app.post('/reviews', async(req, res)=>{
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        });
+
+        app.delete('/reviews/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const result = await reviewCollection.deleteOne(query);
+            res.send(result);
         })
     }
     finally{
